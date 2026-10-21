@@ -1,0 +1,272 @@
+
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#10172a">
+<title>منافسات أبو علي</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1020;color:#fff;font-family:Arial,sans-serif}
+header{text-align:center;padding:25px 12px;background:#17243d}
+h1{color:#f5c451;margin:5px}
+main{max-width:850px;margin:auto;padding:15px}
+.panel{background:#141d33;border:1px solid #30405e;border-radius:16px;padding:16px;margin-bottom:15px}
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px}
+button{cursor:pointer;border:0;border-radius:10px;padding:12px;font-size:16px;font-weight:bold}
+.game{background:#243653;color:white;min-height:115px}
+.game span{display:block;font-size:30px;margin-bottom:8px}
+.gold{background:#f5c451;color:#111827}
+.back{background:#334765;color:white}
+.hidden{display:none!important}
+#board{display:grid;grid-template-columns:repeat(8,1fr);max-width:440px;margin:15px auto;direction:ltr}
+.square{aspect-ratio:1;border-radius:0;padding:0;font-size:clamp(20px,6vw,38px);color:#111}
+.light{background:#eee4ce}.dark{background:#78916f}
+.selected{outline:4px solid #f5c451;outline-offset:-4px}
+.cards{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:15px 0}
+.playcard{background:#fff;color:#17243d;border:2px solid #ddd;width:60px;height:88px;font-size:22px}
+.red{color:#c62845}
+.status{text-align:center;color:#cbd5e1;line-height:1.8}
+.small{color:#aab6d3;font-size:13px;line-height:1.8}
+</style>
+</head>
+<body>
+<header>
+<h1>🏆 منافسات أبو علي</h1>
+<p>العب واجمع نقاطًا تجريبية</p>
+</header>
+<main>
+<section class="panel">
+<h2>💰 رصيدك التجريبي: <span id="points">0</span> نقطة</h2>
+<p class="small">النقاط للتجربة فقط. لا يوجد دفع أو سحب أموال حقيقي.</p>
+</section>
+
+<section id="home" class="games">
+<button class="game" onclick="openGame('chess')"><span>♟️</span>الشطرنج</button>
+<button class="game" onclick="openGame('tarneeb')"><span>🃏</span>الطرنيب السوري</button>
+<button class="game" onclick="openGame('trex')"><span>🎴</span>التركس</button>
+<button class="game" onclick="openGame('memory')"><span>🧠</span>الذاكرة</button>
+</section>
+
+<section id="chess" class="panel hidden">
+<h2>♟️ الشطرنج</h2>
+<p id="chessStatus" class="status">اختر قطعة بيضاء ثم اختر مربعًا آخر.</p>
+<div id="board"></div>
+<button class="back" onclick="resetChess()">إعادة اللعبة</button>
+<button class="back" onclick="goHome()">القائمة الرئيسية</button>
+<p class="small">تنبيه: هذه تجربة أولية؛ حركة القطع والكمبيوتر ليست مطابقة لجميع قوانين الشطرنج.</p>
+</section>
+
+<section id="tarneeb" class="panel hidden">
+<h2>🃏 الطرنيب السوري — تجربة مبسطة</h2>
+<p id="tarneebStatus" class="status">اضغط على ورقة لتلعبها.</p>
+<div class="status">ورقة الكمبيوتر</div>
+<div id="tarneebBot" class="cards"></div>
+<div class="status">أوراقك</div>
+<div id="tarneebHand" class="cards"></div>
+<button class="back" onclick="startTarneeb()">توزيع جديد</button>
+<button class="back" onclick="goHome()">القائمة الرئيسية</button>
+<p class="small">هذه ليست لعبة طرنيب كاملة بأربعة لاعبين ولا تطبق كل قواعدها.</p>
+</section>
+
+<section id="trex" class="panel hidden">
+<h2>🎴 التركس — تجربة مبسطة</h2>
+<p id="trexStatus" class="status">اختر ورقة من يدك.</p>
+<div class="status">ورقة الكمبيوتر</div>
+<div id="trexBot" class="cards"></div>
+<div class="status">أوراقك</div>
+<div id="trexHand" class="cards"></div>
+<button class="back" onclick="startTrex()">توزيع جديد</button>
+<button class="back" onclick="goHome()">القائمة الرئيسية</button>
+<p class="small">هذه تجربة أولية وليست تطبيقًا كاملًا لقوانين التركس.</p>
+</section>
+
+<section id="memory" class="panel hidden">
+<h2>🧠 لعبة الذاكرة</h2>
+<p id="memoryStatus" class="status">ابحث عن الصور المتطابقة.</p>
+<div id="memoryBoard" class="cards"></div>
+<button class="back" onclick="startMemory()">إعادة اللعبة</button>
+<button class="back" onclick="goHome()">القائمة الرئيسية</button>
+</section>
+
+<p class="small">اللعب الحقيقي عبر الإنترنت يحتاج خادمًا وحسابات لاعبين واتصالًا مباشرًا بينهم. هذه النسخة لا تتضمن ذلك بعد.</p>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let points=Number(localStorage.getItem('abualiPoints')||0);
+function showPoints(){
+ $('points').textContent=points;
+ localStorage.setItem('abualiPoints',points);
+}
+function earn(n){points+=n;showPoints()}
+showPoints();
+
+function openGame(id){
+ $('home').classList.add('hidden');
+ ['chess','tarneeb','trex','memory'].forEach(g=>$(g).classList.add('hidden'));
+ $(id).classList.remove('hidden');
+ if(id==='chess')resetChess();
+ if(id==='tarneeb')startTarneeb();
+ if(id==='trex')startTrex();
+ if(id==='memory')startMemory();
+}
+function goHome(){
+ ['chess','tarneeb','trex','memory'].forEach(g=>$(g).classList.add('hidden'));
+ $('home').classList.remove('hidden');
+}
+
+/* الشطرنج التجريبي */
+const starting=[
+'♜','♞','♝','♛','♚','♝','♞','♜',
+'♟','♟','♟','♟','♟','♟','♟','♟',
+...Array(32).fill(''),
+'♙','♙','♙','♙','♙','♙','♙','♙',
+'♖','♘','♗','♕','♔','♗','♘','♖'
+];
+let chess=[],selected=-1;
+function resetChess(){
+ chess=[...starting];selected=-1;
+ $('chessStatus').textContent='دورك: اختر قطعة بيضاء.';
+ drawBoard();
+}
+function drawBoard(){
+ const board=$('board');board.innerHTML='';
+ chess.forEach((piece,i)=>{
+  const row=Math.floor(i/8),col=i%8;
+  const b=document.createElement('button');
+  b.className='square '+((row+col)%2?'dark':'light');
+  if(i===selected)b.classList.add('selected');
+  b.textContent=piece;
+  b.onclick=()=>chessClick(i);
+  board.appendChild(b);
+ });
+}
+function white(p){return '♙♖♘♗♕♔'.includes(p)}
+function black(p){return '♟♜♞♝♛♚'.includes(p)}
+function chessClick(i){
+ if(selected<0){
+  if(chess[i]&&white(chess[i])){selected=i;drawBoard()}
+  else $('chessStatus').textContent='اختر قطعة بيضاء.';
+  return;
+ }
+ if(i===selected){selected=-1;drawBoard();return}
+ if(chess[i]&&white(chess[i])){selected=i;drawBoard();return}
+ chess[i]=chess[selected];chess[selected]='';selected=-1;drawBoard();
+ $('chessStatus').textContent='الكمبيوتر يلعب...';
+ setTimeout(()=>{
+  let moves=[];
+  chess.forEach((p,from)=>{
+   if(black(p))for(let to=0;to<64;to++)
+    if(!chess[to]||white(chess[to]))moves.push([from,to]);
+  });
+  if(moves.length){
+   const m=moves[Math.floor(Math.random()*moves.length)];
+   chess[m[1]]=chess[m[0]];chess[m[0]]='';
+  }
+  drawBoard();
+  $('chessStatus').textContent='دورك الآن. حركة الكمبيوتر عشوائية.';
+ },400);
+}
+
+/* ألعاب الورق التجريبية */
+const suits=['♠','♥','♦','♣'];
+const ranks=['7','8','9','10','J','Q','K','A'];
+function newDeck(){
+ let d=[];
+ suits.forEach(s=>ranks.forEach(r=>d.push({s,r})));
+ return d.sort(()=>Math.random()-.5);
+}
+function drawCards(id,hand,callback){
+ const area=$(id);area.innerHTML='';
+ hand.forEach(card=>{
+  const b=document.createElement('button');
+  b.className='playcard '+(['♥','♦'].includes(card.s)?'red':'');
+  b.textContent=card.r+card.s;
+  b.onclick=()=>callback(card);
+  area.appendChild(b);
+ });
+}
+let tarHand=[],tarBot=[],tarCount=0;
+function startTarneeb(){
+ const d=newDeck();tarHand=d.slice(0,8);tarBot=d.slice(8,16);tarCount=0;
+ $('tarneebBot').innerHTML='';
+ $('tarneebStatus').textContent='اختر ورقة لتلعبها.';
+ drawCards('tarneebHand',tarHand,playTarneeb);
+}
+function playTarneeb(card){
+ const i=tarHand.indexOf(card);if(i<0)return;
+ tarHand.splice(i,1);tarCount++;
+ const bot=tarBot.splice(Math.floor(Math.random()*tarBot.length),1)[0];
+ $('tarneebBot').innerHTML='';
+ if(bot){
+  const b=document.createElement('div');
+  b.className='playcard '+(['♥','♦'].includes(bot.s)?'red':'');
+  b.style.display='grid';b.style.placeItems='center';b.textContent=bot.r+bot.s;
+  $('tarneebBot').appendChild(b);
+ }
+ if(tarCount%2===1)earn(1);
+ drawCards('tarneebHand',tarHand,playTarneeb);
+ if(!tarHand.length){
+  $('tarneebStatus').textContent='انتهت التجربة! حصلت على نقاط تجريبية.';
+  earn(3);
+ }else $('tarneebStatus').textContent='لعب الكمبيوتر ورقة. تابع اللعب.';
+}
+let trexHand=[],trexBot=[],trexCount=0;
+function startTrex(){
+ const d=newDeck();trexHand=d.slice(0,8);trexBot=d.slice(8,16);trexCount=0;
+ $('trexBot').innerHTML='';
+ $('trexStatus').textContent='اختر ورقة من يدك.';
+ drawCards('trexHand',trexHand,playTrex);
+}
+function playTrex(card){
+ const i=trexHand.indexOf(card);if(i<0)return;
+ trexHand.splice(i,1);trexCount++;
+ const bot=trexBot.splice(Math.floor(Math.random()*trexBot.length),1)[0];
+ $('trexBot').innerHTML='';
+ if(bot){
+  const b=document.createElement('div');
+  b.className='playcard '+(['♥','♦'].includes(bot.s)?'red':'');
+  b.style.display='grid';b.style.placeItems='center';b.textContent=bot.r+bot.s;
+  $('trexBot').appendChild(b);
+ }
+ drawCards('trexHand',trexHand,playTrex);
+ if(!trexHand.length){
+  $('trexStatus').textContent='انتهت التجربة!';
+  earn(3);
+ }else $('trexStatus').textContent='الكمبيوتر لعب ورقة. تابع اللعب.';
+}
+
+/* لعبة الذاكرة */
+function startMemory(){
+ const symbols=['🍎','🍋','🍇','🍒','⭐','🌙','🐱','⚽'];
+ const deck=[...symbols,...symbols].sort(()=>Math.random()-.5);
+ const area=$('memoryBoard');area.innerHTML='';
+ let first=null,lock=false,matches=0;
+ $('memoryStatus').textContent='اعثر على الأزواج المتطابقة.';
+ deck.forEach(symbol=>{
+  const b=document.createElement('button');
+  b.className='playcard';b.textContent='؟';
+  b.dataset.open='0';
+  b.onclick=()=>{
+   if(lock||b.dataset.open==='1')return;
+   b.dataset.open='1';b.textContent=symbol;
+   if(!first){first=b;return}
+   if(first.textContent===b.textContent){
+    matches++;earn(1);first=null;
+    if(matches===8){$('memoryStatus').textContent='ممتاز! وجدت كل الأزواج.';earn(5)}
+   }else{
+    lock=true;const previous=first;first=null;
+    setTimeout(()=>{
+     previous.dataset.open='0';b.dataset.open='0';
+     previous.textContent='؟';b.textContent='؟';lock=false;
+    },700);
+   }
+  };
+  area.appendChild(b);
+ });
+}
+</script>
+</body>
+</html>
