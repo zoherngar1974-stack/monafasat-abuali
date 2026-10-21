@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>منافسات أبو علي</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1020;color:#fff;font-family:Arial,sans-serif;padding:16px}
+header,.panel{background:#17223b;padding:18px;border-radius:16px;margin-bottom:15px}
+h1{color:#ffd166;margin:0 0 8px}
+h2{color:#80ed99}
+p{line-height:1.8}
+button{background:#ffd166;color:#151515;border:0;padding:12px 16px;border-radius:10px;font-weight:bold;margin:5px;cursor:pointer}
+input,select{padding:12px;border-radius:8px;border:0;margin:5px;max-width:100%}
+.game{background:#202f4d;padding:14px;border-radius:12px;margin:10px 0}
+#balance{font-size:24px;color:#80ed99;font-weight:bold}
+.small{font-size:13px;color:#cbd5e1}
+</style>
+</head>
+<body>
+<header>
+<h1>🏆 منافسات أبو علي</h1>
+<p>العب، نافس، واجمع النقاط التجريبية!</p>
+<div>رصيدك التجريبي: <span id="balance">1000</span> نقطة</div>
+</header>
+
+<section class="panel">
+<h2>🎮 اختر لعبتك</h2>
+<div class="game">
+<h3>🃏 لعبة الذاكرة</h3>
+<p>طابق البطاقات واجمع النقاط.</p>
+<button onclick="startMemory()">ابدأ اللعب</button>
+<div id="memory"></div>
+</div>
+<div class="game">
+<h3>♟️ الشطرنج</h3>
+<p>قريبًا: منافسات الشطرنج بين اللاعبين.</p>
+</div>
+<div class="game">
+<h3>🃏 طرنيب وتركس</h3>
+<p>قريبًا: غرف لعب ومنافسات تجريبية.</p>
+</div>
+</section>
+
+<section class="panel">
+<h2>💰 المحفظة التجريبية</h2>
+<p>هذا رصيد تجريبي، وليس مالًا حقيقيًا.</p>
+<label>المبلغ التجريبي:</label>
+<input id="amount" type="number" min="1" value="100">
+<br>
+<button onclick="requestMoney('إيداع')">طلب إيداع تجريبي</button>
+<button onclick="requestMoney('سحب')">طلب سحب تجريبي</button>
+<div id="requests"></div>
+<p class="small">طلبات شام كاش هنا تجريبية فقط. لا يتم تحويل أو استلام أموال حقيقية.</p>
+</section>
+
+<script>
+let balance=Number(localStorage.getItem('abualiBalance')||1000);
+let points=0;
+function showBalance(){
+document.getElementById('balance').textContent=balance;
+localStorage.setItem('abualiBalance',balance);
+}
+showBalance();
+
+function startMemory(){
+let symbols=['🍎','🍋','🍇','🍒','🍎','🍋','🍇','🍒'];
+symbols.sort(()=>Math.random()-0.5);
+let html='';
+symbols.forEach((s,i)=>{
+html+='<button id="c'+i+'" onclick="flipCard('+i+')">❓</button>';
+});
+document.getElementById('memory').innerHTML=
+'<p>اعثر على البطاقات المتشابهة.</p>'+html;
+window.memorySymbols=symbols;
+window.memoryOpen=[];
+window.memoryMatched=[];
+}
+
+function flipCard(i){
+if(!window.memorySymbols||window.memoryMatched.includes(i)||
+window.memoryOpen.includes(i)||window.memoryOpen.length>=2)return;
+document.getElementById('c'+i).textContent=window.memorySymbols[i];
+window.memoryOpen.push(i);
+if(window.memoryOpen.length===2){
+let [a,b]=window.memoryOpen;
+if(window.memorySymbols[a]===window.memorySymbols[b]){
+window.memoryMatched.push(a,b);
+balance+=10;
+showBalance();
+window.memoryOpen=[];
+if(window.memoryMatched.length===8){
+document.getElementById('memory').insertAdjacentHTML('beforeend',
+'<p>أحسنت! ربحت 40 نقطة تجريبية إضافية.</p>');
+balance+=40;showBalance();
+}
+}else{
+setTimeout(()=>{
+document.getElementById('c'+a).textContent='❓';
+document.getElementById('c'+b).textContent='❓';
+window.memoryOpen=[];
+},700);
+}
+}
+}
+
+function requestMoney(type){
+let amount=Number(document.getElementById('amount').value);
+if(!Number.isFinite(amount)||amount<=0){
+alert('اكتب مبلغًا صحيحًا');return;
+}
+document.getElementById('requests').innerHTML=
+'<p>تم تسجيل طلب '+type+' تجريبي بقيمة '+amount+
+' نقطة. لا يوجد تحويل مالي حقيقي.</p>';
+}
+</script>
+</body>
+</html>
