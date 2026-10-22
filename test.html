@@ -103,14 +103,27 @@ function showPoints(){
 function earn(n){points+=n;showPoints()}
 showPoints();
 
+
 function openGame(id){
- $('home').classList.add('hidden');
- ['chess','tarneeb','trex','memory'].forEach(g=>$(g).classList.add('hidden'));
- $(id).classList.remove('hidden');
- if(id==='chess')resetChess();
- if(id==='tarneeb')startTarneeb();
- if(id==='trex')startTrex();
- if(id==='memory')startMemory();
+  const games = ['chess','tarneeb','trex','memory'];
+
+  if (!$('home') || !$(id)) {
+    alert('خطأ: لم يتم العثور على صفحة اللعبة.');
+    return;
+  }
+
+  $('home').classList.add('hidden');
+
+  games.forEach(function(g){
+    if ($(g)) $(g).classList.add('hidden');
+  });
+
+  $(id).classList.remove('hidden');
+
+  if (id === 'chess') resetChess();
+  else if (id === 'tarneeb') startTarneeb();
+  else if (id === 'trex') startTrex();
+  else if (id === 'memory') startMemory();
 }
 function goHome(){
  ['chess','tarneeb','trex','memory'].forEach(g=>$(g).classList.add('hidden'));
