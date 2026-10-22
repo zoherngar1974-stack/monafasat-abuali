@@ -130,59 +130,200 @@ function goHome(){
  $('home').classList.remove('hidden');
 }
 
-/* الشطرنج التجريبي */
-const starting=[
-'♜','♞','♝','♛','♚','♝','♞','♜',
-'♟','♟','♟','♟','♟','♟','♟','♟',
-...Array(32).fill(''),
-'♙','♙','♙','♙','♙','♙','♙','♙',
-'♖','♘','♗','♕','♔','♗','♘','♖'
-];
-let chess=[],selected=-1;
-function resetChess(){
- chess=[...starting];selected=-1;
- $('chessStatus').textContent='دورك: اختر قطعة بيضاء.';
- drawBoard();
-}
-function drawBoard(){
- const board=$('board');board.innerHTML='';
- chess.forEach((piece,i)=>{
-  const row=Math.floor(i/8),col=i%8;
-  const b=document.createElement('button');
-  b.className='square '+((row+col)%2?'dark':'light');
-  if(i===selected)b.classList.add('selected');
-  b.textContent=piece;
-  b.onclick=()=>chessClick(i);
-  board.appendChild(b);
- });
-}
-function white(p){return '♙♖♘♗♕♔'.includes(p)}
-function black(p){return '♟♜♞♝♛♚'.includes(p)}
-function chessClick(i){
- if(selected<0){
-  if(chess[i]&&white(chess[i])){selected=i;drawBoard()}
-  else $('chessStatus').textContent='اختر قطعة بيضاء.';
-  return;
- }
- if(i===selected){selected=-1;drawBoard();return}
- if(chess[i]&&white(chess[i])){selected=i;drawBoard();return}
- chess[i]=chess[selected];chess[selected]='';selected=-1;drawBoard();
- $('chessStatus').textContent='الكمبيوتر يلعب...';
- setTimeout(()=>{
-  let moves=[];
-  chess.forEach((p,from)=>{
-   if(black(p))for(let to=0;to<64;to++)
-    if(!chess[to]||white(chess[to]))moves.push([from,to]);
-  });
-  if(moves.length){
-   const m=moves[Math.floor(Math.random()*moves.length)];
-   chess[m[1]]=chess[m[0]];chess[m[0]]='';
+
+/* الشطرنج النظامي التجريبي */
+let chessGame = null;
+let selected = null;
+let botThinking = false;
+
+function resetChess() {
+  if (typeof Chess === 'undefined') {
+    $('chessStatus').textContent =
+      'تعذّر تحميل قواعد الشطرنج. تأكد من اتصال الإنترنت.';
+    return;
   }
+
+  chessGame = new Chess();
+  selected = null;
+  botThinking = false;
   drawBoard();
-  $('chessStatus').textContent='دورك الآن. حركة الكمبيوتر عشوائية.';
- },400);
+  updateChessStatus();
 }
 
+function drawBoard() {
+  const board = $('board');
+  board.innerHTML = '';
+
+  if (!chessGame) return;
+
+  const position = chessGame.board();
+  const files = 'abcdefgh';
+  const legalMoves = selected
+    ? chessGame.moves({ square: selected, verbose: true })
+    : [];
+
+  position.forEach((row, r) => {
+    row.forEach((piece, c) => {
+      const square = files[c] + (8 - r);
+      const b = document.createElement('button');
+
+      b.className =
+        'square ' + ((r + c) % 2 ? 'dark' : 'light');
+
+      if (square === selected) {
+        b.classList.add('selected');
+      }
+
+      if (legalMoves.some(m => m.to === square)) {
+        b.style.boxShadow = 'inset 0 0 0 4px #f5c451';
+      }
+
+      if (piece) {
+        const symbols = {
+          k: '♚', q: '♛', r: '♜',
+          b: '♝', n: '♞', p: '♟'
+        };
+
+        const symbol = symbols[piece.type];
+        b.textContent = piece.color === 'w'
+          ? symbol.toUpperCase() === symbol
+            ? symbol
+            : ({
+                k:'♔', q:'♕', r:'♖',
+                b:'♗', n:'♘', p:'♙'
+              })[piece.type]
+          : symbol;
+      }
+
+      b.onclick = () => chessClick(square);
+      board.appendChild(b);
+    });
+  });
+}
+
+function updateChessStatus() {
+  if (!chessGame) return;
+
+  if (chessGame.in_checkmate()) {
+    $('chessStatus').textContent =
+      chessGame.turn() === 'w'
+        ? 'كش مات! الكمبيوتر فاز.'
+        : 'كش مات! أنت فزت.';
+  } else if (chessGame.in_draw()) {
+    $('chessStatus').textContent = 'انتهت اللعبة بالتعادل.';
+  } else if (botThinking) {
+    $('chessStatus').textContent = 'الكمبيوتر يفكر...';
+  } else if (chessGame.in_check()) {
+    $('chessStatus').textContent =
+      chessGame.turn() === 'w'
+        ? 'كش! دورك، احمِ الملك.'
+        : 'الكمبيوتر في حالة كش.';
+  } else {
+    $('chessStatus').textContent =
+      chessGame.turn() === 'w'
+        ? 'دورك: اختر قطعة بيضاء ثم مربعًا مميزًا.'
+        : 'دور الكمبيوتر.';
+  }
+}
+
+function chessClick(square) {
+  if (!chessGame || botThinking ||
+      chessGame.game_over() || chessGame.turn() !== 'w') {
+    return;
+  }
+
+  const piece = chessGame.get(square);
+
+  if (!selected) {
+    if (piece && piece.color === 'w') {
+      selected = square;
+      drawBoard();
+    }
+    return;
+  }
+
+  if (piece && piece.color === 'w') {
+    selected = square;
+    drawBoard();
+    return;
+  }
+
+  const possible = chessGame.moves({
+    square: selected,
+    verbose: true
+  });
+
+  if (!possible.some(m => m.to === square)) {
+    $('chessStatus').textContent =
+      'هذه الحركة غير قانونية. اختر مربعًا مميزًا.';
+    return;
+  }
+
+  try {
+    chessGame.move({
+      from: selected,
+      to: square,
+      promotion: 'q'
+    });
+  } catch (e) {
+    $('chessStatus').textContent = 'اختر حركة قانونية.';
+    return;
+  }
+
+  selected = null;
+  drawBoard();
+  updateChessStatus();
+
+  if (!chessGame.game_over()) {
+    botThinking = true;
+    updateChessStatus();
+    setTimeout(computerChessMove, 500);
+  }
+}
+
+function computerChessMove() {
+  if (!chessGame || chessGame.game_over()) {
+    botThinking = false;
+    updateChessStatus();
+    return;
+  }
+
+  const moves = chessGame.moves({ verbose: true });
+
+  if (!moves.length) {
+    botThinking = false;
+    updateChessStatus();
+    return;
+  }
+
+  // يفضّل الكمبيوتر أسر القطع والترقية،
+  // ويختار فقط من الحركات القانونية.
+  const scored = moves.map(m => ({
+    move: m,
+    score:
+      (m.captured ? 10 : 0) +
+      (m.promotion ? 8 : 0) +
+      Math.random()
+  }));
+
+  scored.sort((a, b) => b.score - a.score);
+
+  const bestScore = scored[0].score;
+  const choices = scored.filter(x => bestScore - x.score < 1);
+  const chosen = choices[
+    Math.floor(Math.random() * choices.length)
+  ].move;
+
+  chessGame.move({
+    from: chosen.from,
+    to: chosen.to,
+    promotion: chosen.promotion || 'q'
+  });
+
+  botThinking = false;
+  drawBoard();
+  updateChessStatus();
+    }
 /* ألعاب الورق التجريبية */
 const suits=['♠','♥','♦','♣'];
 const ranks=['7','8','9','10','J','Q','K','A'];
